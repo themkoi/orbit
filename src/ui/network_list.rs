@@ -10,6 +10,7 @@ pub struct NetworkList {
     container: gtk::Box,
     list_box: gtk::Box,
     scan_button: gtk::Button,
+    #[allow(dead_code)]
     saved_button: gtk::Button,
     search_entry: gtk::SearchEntry,
     networks: Rc<RefCell<Vec<AccessPoint>>>,
@@ -526,6 +527,7 @@ impl NetworkList {
         *self.on_details.borrow_mut() = Some(Rc::new(callback));
     }
 
+    #[allow(dead_code)]
     pub fn search_entry(&self) -> &gtk::SearchEntry {
         &self.search_entry
     }

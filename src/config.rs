@@ -71,6 +71,7 @@ impl Config {
             .join("config.toml"))
     }
     
+    #[allow(dead_code)]
     pub fn position_tuple(&self) -> (i32, i32) {
         match self.position.as_str() {
             "top-left" => (0, 0),

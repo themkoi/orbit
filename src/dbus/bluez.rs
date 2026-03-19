@@ -123,24 +123,56 @@ impl BluetoothManager {
         Ok(None)
     }
 
-    pub async fn is_powered(&self) -> zbus::Result<bool> {
-        let adapter_str = self.adapter_path.as_ref()
-            .ok_or_else(|| zbus::Error::Address("No Bluetooth adapter found".to_string()))?;
-        let adapter = ObjectPath::try_from(adapter_str.as_str()).map_err(|e| zbus::Error::Variant(e))?;
-        
-        let reply = self.conn
-            .call_method(
-                Some("org.bluez"),
-                &adapter,
-                Some("org.freedesktop.DBus.Properties"),
-                "Get",
-                &("org.bluez.Adapter1", "Powered"),
-            )
-            .await?
-            .body()
-            .deserialize::<zbus::zvariant::OwnedValue>()?;
+    fn check_rfkill_status() -> Result<bool, String> {
+        let output = std::process::Command::new("rfkill")
+            .args(["list", "bluetooth"])
+            .output()
+            .map_err(|e| format!("Failed to run rfkill: {}", e))?;
 
-        bool::try_from(reply).map_err(zbus::Error::from)
+        if !output.status.success() {
+            return Err("rfkill command failed".to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let lower = stdout.to_lowercase();
+
+        if lower.contains("soft blocked: yes") {
+            return Ok(false);
+        }
+
+        if lower.contains("hard blocked: yes") {
+            return Err("Bluetooth is hard-blocked. Check your hardware switch or BIOS settings.".to_string());
+        }
+
+        if lower.contains("soft blocked: no") || lower.is_empty() {
+            return Ok(true);
+        }
+
+        Ok(true)
+    }
+
+    pub async fn is_powered(&self) -> zbus::Result<bool> {
+        match Self::check_rfkill_status() {
+            Ok(powered) => Ok(powered),
+            Err(e) => {
+                log::warn!("Failed to check rfkill status: {}", e);
+                let adapter_str = self.adapter_path.as_ref()
+                    .ok_or_else(|| zbus::Error::Address("No Bluetooth adapter found".to_string()))?;
+                let adapter = ObjectPath::try_from(adapter_str.as_str()).map_err(|e| zbus::Error::Variant(e))?;
+                let reply = self.conn
+                    .call_method(
+                        Some("org.bluez"),
+                        &adapter,
+                        Some("org.freedesktop.DBus.Properties"),
+                        "Get",
+                        &("org.bluez.Adapter1", "Powered"),
+                    )
+                    .await?
+                    .body()
+                    .deserialize::<zbus::zvariant::OwnedValue>()?;
+                bool::try_from(reply).map_err(zbus::Error::from)
+            }
+        }
     }
 
     async fn ensure_powered(&self) -> zbus::Result<()> {
@@ -164,66 +196,53 @@ impl BluetoothManager {
 
     pub async fn set_powered(&self, powered: bool) -> zbus::Result<()> {
         log::info!("BlueZ: Setting powered to {}", powered);
-        
+
         if powered {
-            // Check for RFKill block and attempt unblock
-            log::info!("BlueZ: Attempting to unblock RFKill before powering on");
-            let _ = std::process::Command::new("rfkill")
+            log::info!("BlueZ: Running rfkill unblock bluetooth");
+            let status = std::process::Command::new("rfkill")
                 .arg("unblock")
                 .arg("bluetooth")
-                .status();
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        }
+                .status()
+                .map_err(|e| zbus::Error::Address(format!("Failed to run rfkill: {}", e)))?;
 
-        let adapter_str = self.adapter_path.as_ref()
-            .ok_or_else(|| zbus::Error::Address("No Bluetooth adapter found".to_string()))?;
-        let adapter = ObjectPath::try_from(adapter_str.as_str()).map_err(|e| zbus::Error::Variant(e))?;
-        
-        let value = zbus::zvariant::Value::Bool(powered);
-        match self.conn
-            .call_method(
-                Some("org.bluez"),
-                &adapter,
-                Some("org.freedesktop.DBus.Properties"),
-                "Get",
-                &("org.bluez.Adapter1", "Powered"),
-            )
-            .await {
-                Ok(reply) => {
-                    if let Ok(current_val) = reply.body().deserialize::<zbus::zvariant::OwnedValue>() {
-                        if let Ok(current_powered) = bool::try_from(current_val) {
-                            if current_powered == powered {
-                                log::info!("BlueZ: Adapter already in desired power state ({})", powered);
-                                return Ok(());
-                            }
-                        }
-                    }
-                },
-                Err(_) => {}
+            if !status.success() {
+                log::warn!("rfkill unblock returned non-zero exit code");
             }
 
-        match self.conn
-            .call_method(
-                Some("org.bluez"),
-                &adapter,
-                Some("org.freedesktop.DBus.Properties"),
-                "Set",
-                &("org.bluez.Adapter1", "Powered", value),
-            )
-            .await {
-                Ok(_) => {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+            match Self::check_rfkill_status() {
+                Ok(true) => {
                     log::info!("BlueZ: Power state set successfully to {}", powered);
                     Ok(())
-                },
-                Err(e) => {
-                    log::error!("BlueZ: Failed to set power state to {}: {}", powered, e);
-                    let err_msg = e.to_string();
-                    if err_msg.contains("Failed") || err_msg.contains("Blocked") {
-                        return Err(zbus::Error::Address("Bluetooth is blocked by system (RFKill). Try unblocking it manually.".to_string()));
+                }
+                Ok(false) => {
+                    Err(zbus::Error::Address("Bluetooth is blocked. Failed to unblock.".to_string()))
+                }
+                Err(msg) => {
+                    if msg.contains("hard-blocked") {
+                        Err(zbus::Error::Address(msg))
+                    } else {
+                        log::info!("BlueZ: Power state set successfully to {}", powered);
+                        Ok(())
                     }
-                    Err(e)
                 }
             }
+        } else {
+            log::info!("BlueZ: Running rfkill block bluetooth");
+            let status = std::process::Command::new("rfkill")
+                .arg("block")
+                .arg("bluetooth")
+                .status()
+                .map_err(|e| zbus::Error::Address(format!("Failed to run rfkill: {}", e)))?;
+
+            if !status.success() {
+                log::warn!("rfkill block returned non-zero exit code");
+            }
+
+            log::info!("BlueZ: Power state set successfully to {}", powered);
+            Ok(())
+        }
     }
 
     pub async fn start_discovery(&self) -> zbus::Result<()> {

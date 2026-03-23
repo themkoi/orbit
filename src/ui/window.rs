@@ -719,32 +719,34 @@ impl OrbitWindow {
     }
 
     pub fn show(&self) {
-        self.window.set_visible(true);
+        if !self.window.is_visible() {
+            self.window.set_visible(true);
+            self.window.present();
+            self.window.set_keyboard_mode(KeyboardMode::OnDemand);
 
-        self.window.present();
-        self.window.set_keyboard_mode(KeyboardMode::OnDemand);
-        self.root_revealer.set_reveal_child(false);
+            self.root_revealer.set_reveal_child(false);
 
-        gtk::glib::idle_add_local_once({
             let rev = self.root_revealer.clone();
-            move || rev.set_reveal_child(true)
-        });
+            gtk::glib::idle_add_local_once(move || {
+                rev.set_reveal_child(true);
+            });
+        }
     }
 
     pub fn hide(&self) {
-        let rev = self.root_revealer.clone();
-        rev.set_reveal_child(false);
+        if self.window.is_visible() {
+            let rev = self.root_revealer.clone();
+            let win = self.window.clone();
 
-        let window = self.window.clone();
-        let duration = self.config.borrow().window_transition_duration;
-        gtk::glib::timeout_add_local(
-            std::time::Duration::from_millis(duration.into()),
-            move || {
-                window.set_visible(false);
-                window.set_keyboard_mode(KeyboardMode::None);
+            rev.set_reveal_child(false);
+
+            let duration = self.config.borrow().window_transition_duration;
+            gtk::glib::timeout_add_local(std::time::Duration::from_millis(duration.into()), move || {
+                win.set_visible(false);
+                win.set_keyboard_mode(KeyboardMode::None);
                 gtk::glib::ControlFlow::Break
-            },
-        );
+            });
+        }
     }
 
     pub fn network_list(&self) -> &NetworkList {

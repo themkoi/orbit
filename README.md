@@ -118,6 +118,8 @@ Orbit is designed to look native in your bar. Add the following module to your W
 
 ```toml
 position = "top-right"
+window_transition = "slidedown" # transition type possible options are: "slideright", "slideleft", "slideup", "slidedown", "swingright", "swingleft", "swingup", "swingdown", "fade", "crossfade", "none"
+window_transition_duration = 200 # duration of the transition in ms
 margin_top = 10
 margin_bottom = 10
 margin_left = 10

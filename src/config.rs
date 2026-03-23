@@ -7,11 +7,17 @@ pub struct Config {
     #[serde(default = "default_position")]
     pub position: String,
 
-    #[serde(default = "default_transition")]
+    #[serde(default = "window_default_transition")]
     pub window_transition: String,
 
     #[serde(default = "default_transition_duration")]
     pub window_transition_duration: u32,
+
+    #[serde(default = "stack_default_transition")]
+    pub stack_transition: String,
+
+    #[serde(default = "default_transition_duration")]
+    pub stack_transition_duration: u32,
     
     #[serde(default = "default_margin")]
     pub margin_top: i32,
@@ -27,7 +33,8 @@ pub struct Config {
 }
 
 fn default_position() -> String { "center".to_string() }
-fn default_transition() -> String { "slidedown".to_string() }
+fn window_default_transition() -> String { "slidedown".to_string() }
+fn stack_default_transition() -> String { "slidehorizontal".to_string() }
 fn default_transition_duration() -> u32 { 200 }
 fn default_margin() -> i32 { 10 }
 
@@ -35,8 +42,10 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             position: default_position(),
-            window_transition: default_transition(),
+            window_transition: window_default_transition(),
             window_transition_duration: default_transition_duration(),
+            stack_transition: stack_default_transition(),
+            stack_transition_duration: default_transition_duration(),
             margin_top: default_margin(),
             margin_right: default_margin(),
             margin_bottom: default_margin(),

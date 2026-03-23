@@ -152,7 +152,15 @@ impl OrbitWindow {
         let header = Header::new();
         main_box.append(header.widget());
 
-        let stack = gtk::Stack::builder().vexpand(true).hexpand(true).build();
+        let stack = gtk::Stack::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .transition_type(
+                parse_stack_transition(&config.borrow().stack_transition)
+                    .expect("Invalid revealer transition type"),
+            )
+            .transition_duration(config.borrow().stack_transition_duration)
+            .build();
 
         let network_list = NetworkList::new();
         let saved_networks_list = SavedNetworksList::new();
@@ -754,11 +762,11 @@ impl OrbitWindow {
     pub fn saved_networks_list(&self) -> &SavedNetworksList {
         &self.saved_networks_list
     }
-    
+
     pub fn header(&self) -> &Header {
         &self.header
     }
-    
+
     pub fn stack(&self) -> &gtk::Stack {
         &self.stack
     }
@@ -1231,5 +1239,19 @@ fn parse_revealer_transition(t: &str) -> Result<gtk::RevealerTransitionType, Str
         "fade" | "crossfade" => Ok(gtk::RevealerTransitionType::Crossfade),
         "none" => Ok(gtk::RevealerTransitionType::None),
         other => Err(format!("Unknown transition type: {}", other)),
+    }
+}
+
+fn parse_stack_transition(t: &str) -> Result<gtk::StackTransitionType, String> {
+    match t.to_lowercase().as_str() {
+        "slideright" => Ok(gtk::StackTransitionType::SlideRight),
+        "slideleft" => Ok(gtk::StackTransitionType::SlideLeft),
+        "slideup" => Ok(gtk::StackTransitionType::SlideUp),
+        "slidedown" => Ok(gtk::StackTransitionType::SlideDown),
+        "slidehorizontal" => Ok(gtk::StackTransitionType::SlideLeftRight),
+        "slidevertical" => Ok(gtk::StackTransitionType::SlideUpDown),
+        "crossfade" => Ok(gtk::StackTransitionType::Crossfade),
+        "none" => Ok(gtk::StackTransitionType::None),
+        other => Err(format!("Unknown stack transition type: {}", other)),
     }
 }

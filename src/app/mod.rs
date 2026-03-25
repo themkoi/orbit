@@ -531,7 +531,7 @@ fn setup_events_receiver(
                         }
                         DaemonCommand::Toggle(position, tab) => {
                             log::info!("App: Daemon command Toggle received (tab: {:?})", tab);
-                            if *is_visible.borrow() {
+                            if win.window().is_visible() {
                                 win.hide();
                                 *is_visible.borrow_mut() = false;
                             } else {

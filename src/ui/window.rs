@@ -1,7 +1,7 @@
 use gtk4::{self as gtk, Orientation};
 use gtk4::{prelude::*, Application, ApplicationWindow, Overlay};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::device_list::DeviceList;
@@ -56,6 +56,7 @@ pub struct OrbitWindow {
     theme: Rc<RefCell<Theme>>,
     css_provider: gtk4::CssProvider,
     user_css_provider: gtk4::CssProvider,
+    is_animating: Rc<Cell<bool>>,
 }
 
 impl Clone for OrbitWindow {
@@ -103,6 +104,7 @@ impl Clone for OrbitWindow {
             theme: self.theme.clone(),
             css_provider: self.css_provider.clone(),
             user_css_provider: self.user_css_provider.clone(),
+            is_animating: self.is_animating.clone(),
         }
     }
 }
@@ -645,6 +647,7 @@ impl OrbitWindow {
             theme,
             css_provider,
             user_css_provider,
+            is_animating: Rc::new(Cell::new(false)),
         };
 
         let key_controller = gtk::EventControllerKey::new();
@@ -719,34 +722,62 @@ impl OrbitWindow {
     }
 
     pub fn show(&self) {
-        if !self.window.is_visible() {
-            self.window.set_visible(true);
-            self.window.present();
-            self.window.set_keyboard_mode(KeyboardMode::OnDemand);
-
-            self.root_revealer.set_reveal_child(false);
-
-            let rev = self.root_revealer.clone();
-            gtk::glib::idle_add_local_once(move || {
-                rev.set_reveal_child(true);
-            });
+        if self.is_animating.get() {
+            return;
         }
+
+        self.is_animating.set(true);
+
+        self.window.set_visible(true);
+        self.window.present();
+        self.window.set_keyboard_mode(KeyboardMode::OnDemand);
+        self.root_revealer.set_reveal_child(false);
+
+        let rev = self.root_revealer.clone();
+        let anim = self.is_animating.clone();
+        let duration = self.config.borrow().window_transition_duration;
+
+        gtk::glib::idle_add_local_once(move || {
+            rev.set_reveal_child(true);
+
+            gtk::glib::timeout_add_local(
+                std::time::Duration::from_millis(duration.into()),
+                move || {
+                    println!("set false");
+                    anim.set(false);
+                    gtk::glib::ControlFlow::Break
+                },
+            );
+        });
     }
 
     pub fn hide(&self) {
-        if self.window.is_visible() {
-            let rev = self.root_revealer.clone();
-            let win = self.window.clone();
-
-            rev.set_reveal_child(false);
-
-            let duration = self.config.borrow().window_transition_duration;
-            gtk::glib::timeout_add_local(std::time::Duration::from_millis(duration.into()), move || {
-                win.set_visible(false);
-                win.set_keyboard_mode(KeyboardMode::None);
-                gtk::glib::ControlFlow::Break
-            });
+        if self.is_animating.get() {
+            println!("returning");
+            return;
         }
+
+        self.is_animating.set(true);
+
+        let rev = self.root_revealer.clone();
+        let window = self.window.clone();
+        let anim = self.is_animating.clone();
+
+        rev.set_reveal_child(false);
+
+        let duration = self.config.borrow().window_transition_duration;
+
+        gtk::glib::timeout_add_local(
+            std::time::Duration::from_millis(duration.into()),
+            move || {
+                window.set_visible(false);
+                window.set_keyboard_mode(KeyboardMode::None);
+
+                anim.set(false);
+
+                gtk::glib::ControlFlow::Break
+            },
+        );
     }
 
     pub fn network_list(&self) -> &NetworkList {

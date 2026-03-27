@@ -32,6 +32,10 @@ enum Commands {
         #[arg(long, short)]
         tab: Option<String>,
     },
+    /// Show the window
+    Show,
+    /// Hide the window
+    Hide,
     /// Reload theme from configuration
     ReloadTheme,
     /// Reload config (position, margins) from config.toml
@@ -50,6 +54,8 @@ fn main() {
         Some(Commands::List) => list_networks(),
         Some(Commands::Daemon) => run_daemon(config),
         Some(Commands::Toggle { position, tab }) => toggle_daemon(position, tab),
+        Some(Commands::Show) => show(),
+        Some(Commands::Hide) => hide(),
         Some(Commands::ReloadTheme) => reload_theme(),
         Some(Commands::ReloadConfig) => reload_config(),
         Some(Commands::WaybarStatus) => waybar_status(),
@@ -84,6 +90,40 @@ fn toggle_daemon(position: Option<String>, tab: Option<String>) {
         }
         Err(e) => {
             eprintln!("Failed to send command: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn show() {
+    if !DaemonClient::is_daemon_running() {
+        println!("Daemon not running, nothing to show.");
+        return;
+    }
+
+    match DaemonClient::send_command(DaemonCommand::Show) {
+        Ok(response) => {
+            println!("Show triggered: {}", response);
+        }
+        Err(e) => {
+            eprintln!("Failed to show window: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn hide() {
+    if !DaemonClient::is_daemon_running() {
+        println!("Daemon not running, nothing to hide.");
+        return;
+    }
+
+    match DaemonClient::send_command(DaemonCommand::Hide) {
+        Ok(response) => {
+            println!("Hide triggered: {}", response);
+        }
+        Err(e) => {
+            eprintln!("Failed to hide window: {}", e);
             std::process::exit(1);
         }
     }

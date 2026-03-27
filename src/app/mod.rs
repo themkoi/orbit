@@ -230,6 +230,7 @@ impl OrbitApp {
             }
             
             let is_visible = Rc::new(RefCell::new(!is_daemon));
+            let last_refresh = Rc::new(RefCell::new(std::time::Instant::now()));
             
             let is_visible_sync = is_visible.clone();
             win.window().connect_notify_local(Some("visible"), move |window, _| {
@@ -242,7 +243,7 @@ impl OrbitApp {
                 win.show();
             }
             
-            setup_events_receiver(win.clone(), rx.clone(), is_visible.clone(), nm.clone(), bt.clone(), rt.clone(), tx.clone(), win_theme.clone(), is_switching_pwr.clone());
+            setup_events_receiver(win.clone(), rx.clone(), is_visible.clone(), last_refresh.clone(), nm.clone(), bt.clone(), rt.clone(), tx.clone(), win_theme.clone(), is_switching_pwr.clone());
             setup_ui_callbacks(win.clone(), nm.clone(), bt.clone(), rt.clone(), tx.clone(), current_tab.clone(), is_switching_pwr.clone());
             setup_periodic_refresh(win.clone(), nm, bt, rt.clone(), tx.clone(), is_visible.clone(), current_tab.clone());
         });
@@ -255,6 +256,7 @@ fn setup_events_receiver(
     win: OrbitWindow,
     rx: async_channel::Receiver<AppEvent>,
     is_visible: Rc<RefCell<bool>>,
+    last_refresh: Rc<RefCell<std::time::Instant>>,
     nm: Arc<Mutex<Option<NetworkManager>>>,
     bt: Arc<Mutex<Option<BluetoothManager>>>,
     rt: Arc<tokio::runtime::Runtime>,
@@ -450,7 +452,16 @@ fn setup_events_receiver(
                             win.show();
                             *is_visible.borrow_mut() = true;
                             
-                            // Trigger full refresh on show
+                            // Trigger full refresh on show (with 2 second cooldown)
+                            let last_refresh_clone = last_refresh.clone();
+                            let should_refresh = {
+                                let last = *last_refresh_clone.borrow();
+                                last.elapsed() > std::time::Duration::from_secs(2)
+                            };
+                            
+                            if should_refresh {
+                                *last_refresh_clone.borrow_mut() = std::time::Instant::now();
+                            
                             let nm_ref = nm.clone();
                             let bt_ref = bt.clone();
                             let rt_ref = rt.clone();
@@ -525,6 +536,7 @@ fn setup_events_receiver(
                                     }
                                 }
                             });
+                            }
                         }
                         DaemonCommand::Hide => {
                             win.hide();
@@ -547,6 +559,16 @@ fn setup_events_receiver(
                                 win.show();
                                 *is_visible.borrow_mut() = true;
 
+                                
+                                // Trigger full refresh on show (with 2 second cooldown)
+                                let last_refresh_clone = last_refresh.clone();
+                                let should_refresh = {
+                                    let last = *last_refresh_clone.borrow();
+                                    last.elapsed() > std::time::Duration::from_secs(2)
+                                };
+                                
+                                if should_refresh {
+                                    *last_refresh_clone.borrow_mut() = std::time::Instant::now();
                                 
                                 let nm_ref = nm.clone();
                                 let bt_ref = bt.clone();
@@ -631,6 +653,7 @@ fn setup_events_receiver(
                                         }
                                     });
                                 });
+                                }
                             }
                         }
                         DaemonCommand::ReloadTheme => {

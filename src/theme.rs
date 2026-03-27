@@ -406,6 +406,12 @@ window {{
     color: {accent};
 }}
 
+.orbit-title {{
+    font-size: 16px;
+    font-weight: 800;
+    color: {fg};
+}}
+
 /* Inputs */
 entry, password-entry {{
     background-color: rgba(255, 255, 255, 0.05);

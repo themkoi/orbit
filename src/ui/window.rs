@@ -1,7 +1,7 @@
 use gtk4::{ApplicationWindow, Application, prelude::*, Overlay};
 use gtk4::{self as gtk, Orientation};
 use gtk4_layer_shell::{LayerShell, Layer, KeyboardMode, Edge};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::config::Config;
@@ -15,6 +15,7 @@ use crate::dbus::network_manager::NetworkDetails;
 
 pub struct OrbitWindow {
     window: ApplicationWindow,
+    root_revealer: gtk::Revealer,
     config: Rc<RefCell<Config>>,
     header: Header,
     network_list: NetworkList,
@@ -55,12 +56,14 @@ pub struct OrbitWindow {
     theme: Rc<RefCell<Theme>>,
     css_provider: gtk4::CssProvider,
     user_css_provider: gtk4::CssProvider,
+    is_animating: Rc<Cell<bool>>,
 }
 
 impl Clone for OrbitWindow {
     fn clone(&self) -> Self {
         Self {
             window: self.window.clone(),
+            root_revealer: self.root_revealer.clone(),
             config: self.config.clone(),
             header: self.header.clone(),
             network_list: self.network_list.clone(),
@@ -101,6 +104,7 @@ impl Clone for OrbitWindow {
             theme: self.theme.clone(),
             css_provider: self.css_provider.clone(),
             user_css_provider: self.user_css_provider.clone(),
+            is_animating: self.is_animating.clone(),
         }
     }
 }
@@ -156,6 +160,8 @@ impl OrbitWindow {
         let stack = gtk::Stack::builder()
             .vexpand(true)
             .hexpand(true)
+            .transition_type(parse_stack_transition(&config.borrow().stack_transition))
+            .transition_duration(config.borrow().stack_transition_duration)
             .build();
         
         let network_list = NetworkList::new();
@@ -536,7 +542,17 @@ impl OrbitWindow {
         
         overlay.add_overlay(&bt_agent_revealer);
         
-        window.set_child(Some(&overlay));
+        let root_revealer = gtk::Revealer::builder()
+            .transition_type(parse_revealer_transition(&config.borrow().window_transition))
+            .transition_duration(config.borrow().window_transition_duration)
+            .child(&overlay)
+            .valign(gtk::Align::Start)
+            .build();
+        
+        overlay.set_valign(gtk::Align::Start);
+        main_box.set_valign(gtk::Align::Start);
+        
+        window.set_child(Some(&root_revealer));
         
         let password_callback: Rc<RefCell<Option<Rc<dyn Fn(Option<String>)>>>> = Rc::new(RefCell::new(None));
         let details_callback: Rc<RefCell<Option<Rc<dyn Fn(String, bool)>>>> = Rc::new(RefCell::new(None));
@@ -581,6 +597,7 @@ impl OrbitWindow {
 
         let win = Self {
             window: window.clone(),
+            root_revealer,
             config,
             header,
             network_list,
@@ -621,6 +638,7 @@ impl OrbitWindow {
             theme,
             css_provider,
             user_css_provider,
+            is_animating: Rc::new(Cell::new(false)),
         };
 
         let key_controller = gtk::EventControllerKey::new();
@@ -693,14 +711,52 @@ impl OrbitWindow {
     }
     
     pub fn show(&self) {
+        if self.is_animating.get() {
+            return;
+        }
+        self.is_animating.set(true);
+
         self.window.set_visible(true);
         self.window.present();
         self.window.set_keyboard_mode(KeyboardMode::OnDemand);
+
+        let rev = self.root_revealer.clone();
+        let anim = self.is_animating.clone();
+        let duration = self.config.borrow().window_transition_duration;
+
+        gtk::glib::idle_add_local_once(move || {
+            rev.set_reveal_child(true);
+            gtk::glib::timeout_add_local(
+                std::time::Duration::from_millis(duration.into()),
+                move || {
+                    anim.set(false);
+                    gtk::glib::ControlFlow::Break
+                },
+            );
+        });
     }
     
     pub fn hide(&self) {
-        self.window.set_visible(false);
-        self.window.set_keyboard_mode(KeyboardMode::None);
+        if self.is_animating.get() {
+            return;
+        }
+        self.is_animating.set(true);
+
+        self.root_revealer.set_reveal_child(false);
+
+        let window = self.window.clone();
+        let anim = self.is_animating.clone();
+        let duration = self.config.borrow().window_transition_duration;
+
+        gtk::glib::timeout_add_local(
+            std::time::Duration::from_millis(duration.into()),
+            move || {
+                window.set_visible(false);
+                window.set_keyboard_mode(KeyboardMode::None);
+                anim.set(false);
+                gtk::glib::ControlFlow::Break
+            },
+        );
     }
     
     pub fn network_list(&self) -> &NetworkList {
@@ -1124,5 +1180,35 @@ fn sanitize_error_message(msg: &str) -> String {
         "Bluetooth is blocked by system (RFKill). Try unblocking it manually.".to_string()
     } else {
         msg.to_string()
+    }
+}
+
+fn parse_revealer_transition(t: &str) -> gtk::RevealerTransitionType {
+    match t.to_lowercase().as_str() {
+        "slideright" => gtk::RevealerTransitionType::SlideRight,
+        "slideleft" => gtk::RevealerTransitionType::SlideLeft,
+        "slideup" => gtk::RevealerTransitionType::SlideUp,
+        "slidedown" => gtk::RevealerTransitionType::SlideDown,
+        "swingright" => gtk::RevealerTransitionType::SwingRight,
+        "swingleft" => gtk::RevealerTransitionType::SwingLeft,
+        "swingup" => gtk::RevealerTransitionType::SwingUp,
+        "swingdown" => gtk::RevealerTransitionType::SwingDown,
+        "fade" | "crossfade" => gtk::RevealerTransitionType::Crossfade,
+        "none" => gtk::RevealerTransitionType::None,
+        _ => gtk::RevealerTransitionType::SlideDown,
+    }
+}
+
+fn parse_stack_transition(t: &str) -> gtk::StackTransitionType {
+    match t.to_lowercase().as_str() {
+        "slideright" => gtk::StackTransitionType::SlideRight,
+        "slideleft" => gtk::StackTransitionType::SlideLeft,
+        "slideup" => gtk::StackTransitionType::SlideUp,
+        "slidedown" => gtk::StackTransitionType::SlideDown,
+        "slidehorizontal" => gtk::StackTransitionType::SlideLeftRight,
+        "slidevertical" => gtk::StackTransitionType::SlideUpDown,
+        "crossfade" => gtk::StackTransitionType::Crossfade,
+        "none" => gtk::StackTransitionType::None,
+        _ => gtk::StackTransitionType::SlideLeftRight,
     }
 }

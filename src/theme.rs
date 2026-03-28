@@ -509,12 +509,12 @@ entry:focus, password-entry:focus {{
 
 /* Power toggle switch */
 .orbit-toggle-switch {{
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.12) !important;
     border-radius: 9999px;
 }}
 
 .orbit-toggle-switch:checked {{
-    background-color: {accent};
+    background-color: {accent} !important;
 }}
 
 .orbit-battery-mini {{

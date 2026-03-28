@@ -369,10 +369,9 @@ window {{
     letter-spacing: 0.15em;
     color: {gold};
     font-weight: 800;
-    padding: 6px 12px;
+    padding: 10px 12px;
     margin-top: 12px;
     margin-bottom: 8px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }}
 
 /* Footer */

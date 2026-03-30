@@ -79,6 +79,12 @@ systemctl --user enable --now orbit
 # Toggle visibility
 orbit toggle [position]
 
+# Show the window
+orbit show
+
+# Hide the window
+orbit hide
+
 # Open specific tab directly
 orbit toggle --tab [wifi|bluetooth|vpn]
 
@@ -117,11 +123,23 @@ Orbit is designed to look native in your bar. Add the following module to your W
 ### Config File (`~/.config/orbit/config.toml`)
 
 ```toml
+# Window position on screen
 position = "top-right"
+
+# Margins (in pixels) from screen edges
 margin_top = 10
 margin_bottom = 10
 margin_left = 10
 margin_right = 10
+
+# Animation (optional)
+# Window transitions: slidedown, slideup, slideleft, slideright, swingdown, swingup, swingleft, swingright, fade, crossfade, none
+window_transition = "slidedown"
+window_transition_duration = 200
+
+# Tab switching transitions: slidehorizontal, slidevertical, slidedown, slideup, slideleft, slideright, crossfade, none
+stack_transition = "slidehorizontal"
+stack_transition_duration = 200
 ```
 
 ### Theme File (`~/.config/orbit/theme.toml`)

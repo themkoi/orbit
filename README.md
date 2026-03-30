@@ -149,6 +149,7 @@ accent_primary = "#8b5cf6"
 accent_secondary = "#06b6d4"
 background = "#1e1e2e"
 foreground = "#d4d4d8"
+opacity = 0.91
 ```
 
 ## License

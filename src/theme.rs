@@ -7,6 +7,7 @@ struct ThemeFile {
     background: Option<String>,
     foreground: Option<String>,
     destructive: Option<String>,
+    opacity: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -16,6 +17,7 @@ pub struct Theme {
     pub background: String,
     pub foreground: String,
     pub destructive: String,
+    pub opacity: f32,
 }
 
 impl Default for Theme {
@@ -26,6 +28,7 @@ impl Default for Theme {
             background: "#1e1e2e".to_string(),
             foreground: "#d4d4d8".to_string(),
             destructive: "#ef4444".to_string(),
+            opacity: 0.91,
         }
     }
 }
@@ -48,6 +51,7 @@ impl Theme {
                             if let Some(c) = theme_file.background { theme.background = c; }
                             if let Some(c) = theme_file.foreground { theme.foreground = c; }
                             if let Some(c) = theme_file.destructive { theme.destructive = c; }
+                            if let Some(o) = theme_file.opacity { theme.opacity = o; }
                             return theme;
                         }
                         Err(e) => {
@@ -123,7 +127,7 @@ impl Theme {
         let is_dark = self.get_luminance(bg) < 0.5;
         
         let section_bg_hex = self.adjust_color(bg, 0.2); 
-        let panel_bg = self.hex_to_rgba(bg, 0.91);
+        let panel_bg = self.hex_to_rgba(bg, self.opacity);
         let section_bg = self.hex_to_rgba(&section_bg_hex, 0.94);
         let opaque_bg = self.hex_to_rgba(bg, 0.99); 
         

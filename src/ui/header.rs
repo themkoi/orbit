@@ -1,7 +1,11 @@
 use gtk4::prelude::*;
 use gtk4::{self as gtk, Orientation};
+use gtk4::gdk;
+use gdk_pixbuf::PixbufLoader;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+const ORBIT_LOGO: &[u8] = include_bytes!("../../assets/OrbitLogo.png");
 
 #[derive(Clone)]
 pub struct Header {
@@ -20,19 +24,30 @@ impl Header {
         let container = gtk::Box::builder()
             .orientation(Orientation::Vertical)
             .css_classes(["orbit-header"])
-            .spacing(16)
+            .spacing(8)
             .build();
         
         let title_row = gtk::Box::builder()
             .orientation(Orientation::Horizontal)
-            .spacing(10)
+            .spacing(4)
             .build();
         
+        let loader = PixbufLoader::new();
+        loader.write(ORBIT_LOGO).expect("Failed to load embedded Orbit logo");
+        loader.close().expect("Failed to close logo loader");
+        let pixbuf = loader.pixbuf().expect("Failed to get logo pixbuf");
+        let logo_texture = gdk::Texture::for_pixbuf(&pixbuf);
+
         let orbit_icon = gtk::Image::builder()
-            .icon_name("network-wireless-symbolic")
-            .pixel_size(24)
-            .css_classes(["orbit-icon-accent"])
+            .paintable(&logo_texture)
+            .pixel_size(64)
             .build();
+
+        let logo_container = gtk::Box::builder()
+            .css_classes(["orbit-logo-container"])
+            .valign(gtk::Align::Center)
+            .build();
+        logo_container.append(&orbit_icon);
         
         let title = gtk::Label::builder()
             .label("Orbit")
@@ -60,7 +75,7 @@ impl Header {
         power_box.append(&power_label);
         power_box.append(&power_switch);
         
-        title_row.append(&orbit_icon);
+        title_row.append(&logo_container);
         title_row.append(&title);
         title_row.append(&power_box);
         

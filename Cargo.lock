@@ -1540,12 +1540,13 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "orbit"
-version = "2.4.4"
+version = "2.4.5"
 dependencies = [
  "async-channel",
  "clap",
  "env_logger",
  "futures-util",
+ "gdk-pixbuf",
  "gtk4",
  "gtk4-layer-shell",
  "log",

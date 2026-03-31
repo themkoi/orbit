@@ -1,6 +1,6 @@
 [package]
 name = "orbit"
-version = "2.4.4"
+version = "2.4.5"
 edition = "2021"
 description = "A WiFi/Bluetooth manager for Wayland"
 authors = ["Amadeus"]
@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 gtk4 = "0.9"
+gdk-pixbuf = "0.20"
 gtk4-layer-shell = "0.4"
 zbus = { version = "4.4", default-features = false, features = ["tokio"] }
 tokio = { version = "1", features = ["full"] }

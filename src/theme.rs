@@ -187,7 +187,7 @@ window {{
     border-bottom: 1px solid {separator};
     border-radius: 16px 16px 0 0;
     margin: -8px -8px 8px -8px;
-    padding: 16px 16px 8px 16px;
+    padding: 8px 8px 8px 8px;
 }}
 
 /* Tabs */
@@ -514,6 +514,11 @@ entry:focus, password-entry:focus {{
 .orbit-icon-container {{
     background-color: {separator};
     border-radius: 8px;
+    padding: 6px;
+}}
+
+/* Logo container */
+.orbit-logo-container {{
     padding: 6px;
 }}
 

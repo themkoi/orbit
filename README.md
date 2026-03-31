@@ -68,7 +68,7 @@ cargo build --release
 sudo install -Dm755 target/release/orbit /usr/bin/orbit
 # Install systemd service
 mkdir -p ~/.config/systemd/user/
-cp orbit.service ~/.config/systemd/user/
+cp aur/orbit.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now orbit
 ```

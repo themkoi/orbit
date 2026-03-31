@@ -28,7 +28,7 @@ enum Commands {
     Toggle {
         /// Optional position override (top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right)
         position: Option<String>,
-        /// Optional tab to switch to (wifi, saved, bluetooth)
+        /// Optional tab to switch to (wifi, bluetooth, vpn)
         #[arg(long, short)]
         tab: Option<String>,
     },

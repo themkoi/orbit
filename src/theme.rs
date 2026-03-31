@@ -373,9 +373,14 @@ window {{
     letter-spacing: 0.15em;
     color: {gold};
     font-weight: 800;
-    padding: 10px 12px;
+    padding: 14px 12px;
     margin-top: 12px;
     margin-bottom: 8px;
+}}
+
+/* VPN Dashboard */
+.orbit-vpn-dashboard {{
+    padding: 4px 0;
 }}
 
 /* Footer */
@@ -391,6 +396,7 @@ window {{
     font-weight: 700;
     font-size: 14px;
     color: {fg};
+    padding: 4px 0;
 }}
 
 .orbit-detail-label {{
@@ -467,6 +473,7 @@ entry:focus, password-entry:focus {{
     font-size: 11px;
     color: {fg};
     opacity: 0.6;
+    padding: 2px 0;
 }}
 
 .orbit-status-accent {{

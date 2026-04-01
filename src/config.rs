@@ -2,7 +2,6 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "kebab-case")]
 pub struct Config {
     #[serde(default = "default_position")]
     pub position: String,

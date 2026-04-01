@@ -111,6 +111,7 @@ impl Clone for OrbitWindow {
 
 impl OrbitWindow {
     pub fn new(app: &Application, config: Config, theme: Rc<RefCell<Theme>>) -> Self {
+        println!("Loaded config: window_transition = '{}'", config.window_transition);
         let window = ApplicationWindow::builder()
             .application(app)
             .default_width(420)
@@ -844,6 +845,15 @@ impl OrbitWindow {
     pub fn reload_config(&self) {
         let mut config = self.config.borrow_mut();
         *config = Config::load();
+        
+        println!("Reloaded config: window_transition = '{}'", config.window_transition);
+        
+        self.root_revealer.set_transition_type(parse_revealer_transition(&config.window_transition));
+        self.root_revealer.set_transition_duration(config.window_transition_duration);
+        
+        self.stack.set_transition_type(parse_stack_transition(&config.stack_transition));
+        self.stack.set_transition_duration(config.stack_transition_duration);
+        
         drop(config);
         self.apply_position();
     }
